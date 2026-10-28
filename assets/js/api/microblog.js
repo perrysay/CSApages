@@ -25,7 +25,9 @@ export async function fetchPosts(pagePath) {
     try {
         const response = await fetch(apiUrl, fetchOptions);
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const error = new Error(`HTTP error! status: ${response.status}`);
+            error.status = response.status;
+            throw error;
         }
         const data = await response.json();
         console.log('Microblog posts retrieved:', data);

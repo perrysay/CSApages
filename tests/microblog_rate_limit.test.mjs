@@ -90,6 +90,25 @@ test('all API writes share the limiter while reads remain available', async () =
     }
 });
 
+test('microblog reads preserve 401 status for the signed-out state', async () => {
+    const limiterUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}#unauthorized`;
+    const apiSource = (await readFile(new URL('../assets/js/api/microblog.js', import.meta.url), 'utf8'))
+        .replace("import { pythonURI, fetchOptions } from './config.js';", "const pythonURI = 'http://localhost:8587'; const fetchOptions = {};")
+        .replace("'./microblog-rate-limit.js'", JSON.stringify(limiterUrl));
+    const api = await import(`data:text/javascript;base64,${Buffer.from(apiSource).toString('base64')}`);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => ({ ok: false, status: 401 });
+    try {
+        await assert.rejects(api.fetchPosts('/community'), error => {
+            assert.equal(error.status, 401);
+            assert.equal(error.message, 'HTTP error! status: 401');
+            return true;
+        });
+    } finally {
+        globalThis.fetch = originalFetch;
+    }
+});
+
 test('Web Locks rejects a concurrent tab without queuing another write', async () => {
     const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
     let locked = false;

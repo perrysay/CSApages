@@ -5,6 +5,21 @@ import vm from 'node:vm';
 
 const html = await readFile(new URL('../_includes/microblog_foundation.html', import.meta.url), 'utf8');
 
+test('signed-out microblog state offers site sign-in and guest login uses the Flask API route', () => {
+    assert.match(html, /microblog-auth-required/);
+    assert.match(html, /href="\$\{baseurl\}\/login"/);
+    assert.match(html, /fetch\(`\$\{pythonURI\}\/api\/authenticate`/);
+});
+
+test('microblog text is escaped before it is rendered', () => {
+    const start = html.indexOf('function escapeHtml(text) {');
+    const end = html.indexOf('\n}', start) + 2;
+    const helper = html.slice(start, end);
+    const context = {};
+    vm.runInNewContext(`${helper}\nresult = escapeHtml('<img src=x onerror="run()"> &');`, context);
+    assert.equal(context.result, '&lt;img src=x onerror=&quot;run()&quot;&gt; &amp;');
+});
+
 for (const formId of ['microblog-form', 'reply-form']) {
     test(`${formId}: disables during save, rejects repeat submits, preserves rejected draft`, async () => {
         const start = html.indexOf(`document.getElementById('${formId}').onsubmit`);
@@ -28,7 +43,7 @@ for (const formId of ['microblog-form', 'reply-form']) {
             pagePermalink: '/microblog',
             createPost: write, updatePost: write, createReply: write,
             closeModal: () => closed++, closeReplyModal: () => closed++,
-            renderMicroblogTable: () => {}, alert: message => alerts.push(message)
+            renderMicroblogFeed: () => {}, alert: message => alerts.push(message)
         });
         const form = elements[formId];
         const event = { preventDefault() {} };

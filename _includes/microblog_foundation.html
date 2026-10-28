@@ -1,34 +1,49 @@
-<!-- Floating Microblog Button (upper right, below header) -->
-<button id="microblog-toggle-btn" class="microblog-fab microblog-fab-top" aria-label="Open Microblog">💬 Microblog</button>
+<button id="microblog-toggle-btn" class="microblog-fab" type="button" aria-label="Open Microblog" aria-controls="microblog-panel" aria-expanded="false">Microblog</button>
 
-<!-- Microblog Side Panel -->
-<aside id="microblog-panel" class="microblog-panel" tabindex="-1" aria-label="Microblog panel">
+<aside id="microblog-panel" class="microblog-panel" tabindex="-1" aria-label="Microblog panel" aria-hidden="true">
   <div class="microblog-panel-header">
-    <button id="microblog-close-btn" class="microblog-close-btn" aria-label="Close Microblog">&times;</button>
-    <h2 class="microblog-panel-title">Microblog</h2>
-    <button id="guest-signup-toggle" class="guest-signup-toggle-btn">Guest Signup</button>
+    <div class="microblog-panel-heading">
+      <p class="microblog-eyebrow">Community</p>
+      <h2 class="microblog-panel-title">Microblog</h2>
+    </div>
+    <div class="microblog-panel-header-actions">
+      <button id="guest-signup-toggle" class="guest-signup-toggle-btn" type="button" aria-expanded="false" aria-controls="guest-signup-form">Guest signup</button>
+      <button id="microblog-close-btn" class="microblog-close-btn" type="button" aria-label="Close Microblog">&times;</button>
+    </div>
   </div>
 
-  <!-- Guest Signup Form (initially hidden) -->
-  <div id="guest-signup-form" class="guest-signup-container" style="display: none;">
-    <h3 class="guest-signup-title">Quick Guest Signup</h3>
+  <div id="guest-signup-form" class="guest-signup-container" hidden>
+    <h3 class="guest-signup-title">Quick guest signup</h3>
     <form id="guest-form" onsubmit="handleGuestSignup(event);">
       <div class="guest-form-group">
-        <input type="text" id="guest-username" placeholder="Username" required>
+        <label for="guest-username">Username</label>
+        <input type="text" id="guest-username" autocomplete="username" required>
       </div>
       <div class="guest-form-group">
-        <input type="password" id="guest-password" placeholder="Password" required>
+        <label for="guest-password">Password</label>
+        <input type="password" id="guest-password" autocomplete="new-password" required>
       </div>
-      <p>
-        <button type="submit" class="guest-submit-btn">Sign Up & Login</button>
-      </p>
-      <p id="guest-status-message" class="guest-status"></p>
+      <button type="submit" class="guest-submit-btn">Sign up &amp; log in</button>
+      <p id="guest-status-message" class="guest-status" role="status" aria-live="polite"></p>
     </form>
   </div>
 
   <div class="microblog-panel-content">
-    <!-- MicroBlog Container -->
-    <div id="microblog-playground">
+    <div class="microblog-feed-heading">
+      <div>
+        <h3>Community notes</h3>
+        <p>Questions, ideas, and updates from across the site.</p>
+      </div>
+      <button id="create-btn" class="microblog-compose-btn" type="button">Write a post</button>
+    </div>
+    <div class="microblog-feed-toolbar">
+      <span class="microblog-feed-label">Show</span>
+      <div class="microblog-filter-controls" role="group" aria-label="Filter microblog posts">
+        <button id="microblog-filter-page" class="microblog-filter-btn is-active" type="button" aria-pressed="true">This page</button>
+        <button id="microblog-filter-all" class="microblog-filter-btn" type="button" aria-pressed="false">All posts</button>
+      </div>
+    </div>
+    <div id="microblog-playground" class="microblog-feed" aria-live="polite" aria-busy="true">
       <em>Loading microblog posts...</em>
     </div>
   </div>
@@ -36,7 +51,7 @@
 
 <script type="module">
 // Import required functions from config
-import { pythonURI, javaURI, fetchOptions } from '{{site.baseurl}}/assets/js/api/config.js';
+import { pythonURI, fetchOptions } from '{{site.baseurl}}/assets/js/api/config.js';
 
 // Microblog panel open/close logic
 const microblogPanel = document.getElementById('microblog-panel');
@@ -45,11 +60,17 @@ const microblogCloseBtn = document.getElementById('microblog-close-btn');
 
 function openMicroblogPanel() {
   microblogPanel.classList.add('open');
+  microblogPanel.setAttribute('aria-hidden', 'false');
+  microblogFab.setAttribute('aria-expanded', 'true');
   microblogFab.style.display = 'none';
+  microblogPanel.focus();
 }
 function closeMicroblogPanel() {
   microblogPanel.classList.remove('open');
+  microblogPanel.setAttribute('aria-hidden', 'true');
+  microblogFab.setAttribute('aria-expanded', 'false');
   microblogFab.style.display = '';
+  microblogFab.focus();
 }
 microblogFab.onclick = openMicroblogPanel;
 microblogCloseBtn.onclick = closeMicroblogPanel;
@@ -59,11 +80,8 @@ const guestSignupToggle = document.getElementById('guest-signup-toggle');
 const guestSignupForm = document.getElementById('guest-signup-form');
 
 guestSignupToggle.onclick = function() {
-  if (guestSignupForm.style.display === 'none') {
-    guestSignupForm.style.display = 'block';
-  } else {
-    guestSignupForm.style.display = 'none';
-  }
+  guestSignupForm.hidden = !guestSignupForm.hidden;
+  guestSignupToggle.setAttribute('aria-expanded', String(!guestSignupForm.hidden));
 };
 
 // Guest signup handler with auto-login
@@ -87,8 +105,6 @@ window.handleGuestSignup = async function(event) {
   };
 
   try {
-    let accountExists = false;
-
     // Step 1: Try to create guest account using Flask backend
     statusMessage.textContent = 'Creating guest account...';
     const signupResponse = await fetch(`${pythonURI}/api/user/guest`, {
@@ -99,7 +115,6 @@ window.handleGuestSignup = async function(event) {
 
     if (!signupResponse.ok) {
       // Account might already exist, so we'll try to login instead
-      accountExists = true;
       statusMessage.textContent = 'Account exists, logging in...';
     } else {
       await signupResponse.json();
@@ -107,7 +122,7 @@ window.handleGuestSignup = async function(event) {
     }
 
     // Step 2: Login with the credentials (whether account was just created or already existed)
-    const loginResponse = await fetch(`${pythonURI}/authenticate`, {
+    const loginResponse = await fetch(`${pythonURI}/api/authenticate`, {
       ...fetchOptions,
       method: 'POST',
       body: JSON.stringify(signupData)
@@ -122,10 +137,12 @@ window.handleGuestSignup = async function(event) {
     // Success - stay on current page
     statusMessage.textContent = 'Success! You are now logged in.';
     statusMessage.style.color = 'green';
+    window.dispatchEvent(new Event('microblog:authenticated'));
 
     // Hide the form after successful signup/login
     setTimeout(() => {
-      guestSignupForm.style.display = 'none';
+      guestSignupForm.hidden = true;
+      guestSignupToggle.setAttribute('aria-expanded', 'false');
       // Reset form
       document.getElementById('guest-username').value = '';
       document.getElementById('guest-password').value = '';
@@ -143,46 +160,45 @@ window.handleGuestSignup = async function(event) {
 };
 </script>
 
-<!-- Create/Edit Modal Overlay using Tailwind -->
-<div id="microblog-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+<div id="microblog-modal" class="microblog-modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="microblog-modal-panel">
     <div class="microblog-modal-header">
-      <button id="modal-close" class="microblog-modal-close" aria-label="Close Modal">&times;</button>
       <h2 id="modal-title" class="microblog-modal-title">Create Microblog Post</h2>
+      <button id="modal-close" class="microblog-modal-close" type="button" aria-label="Close Modal">&times;</button>
     </div>
-    <form id="microblog-form" class="space-y-4">
+    <form id="microblog-form" class="microblog-form">
       <input type="hidden" id="post-id" name="id">
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Topic</label>
-        <input id="topic-id" name="topicId" type="text" class="mt-1 block w-full border border-gray-300 rounded-md p-2" readonly>
+      <div class="microblog-form-group">
+        <label for="topic-id" class="microblog-form-label">Topic</label>
+        <input id="topic-id" name="topicId" type="text" readonly>
       </div>
       <div class="microblog-form-group">
         <label for="content" class="microblog-form-label">Content <span class="required">*</span></label>
-        <textarea id="content" name="content" required class=""></textarea>
+        <textarea id="content" name="content" required></textarea>
       </div>
-      <div class="flex justify-end space-x-2">
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
+      <div class="microblog-form-actions">
+        <button type="button" id="microblog-cancel-btn" class="microblog-btn microblog-btn-secondary">Cancel</button>
+        <button type="submit" class="microblog-btn">Save</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Reply Modal -->
-<div id="reply-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+<div id="reply-modal" class="microblog-modal hidden" role="dialog" aria-modal="true" aria-labelledby="reply-modal-title">
   <div class="microblog-modal-panel">
     <div class="microblog-modal-header">
-      <button id="reply-modal-close" class="microblog-modal-close" aria-label="Close Reply Modal">&times;</button>
       <h2 id="reply-modal-title" class="microblog-modal-title">Reply to Post</h2>
+      <button id="reply-modal-close" class="microblog-modal-close" type="button" aria-label="Close Reply Modal">&times;</button>
     </div>
-    <form id="reply-form" class="space-y-4">
+    <form id="reply-form" class="microblog-form">
       <input type="hidden" id="reply-post-id" name="postId">
       <div class="microblog-form-group">
         <label for="reply-content" class="microblog-form-label">Content <span class="required">*</span></label>
-        <textarea id="reply-content" name="content" required class=""></textarea>
+        <textarea id="reply-content" name="content" required></textarea>
       </div>
-      <div class="flex justify-end space-x-2">
-        <button type="button" id="reply-cancel-btn" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">Cancel</button>
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Reply</button>
+      <div class="microblog-form-actions">
+        <button type="button" id="reply-cancel-btn" class="microblog-btn microblog-btn-secondary">Cancel</button>
+        <button type="submit" class="microblog-btn">Reply</button>
       </div>
     </form>
   </div>
@@ -192,6 +208,7 @@ window.handleGuestSignup = async function(event) {
 <script type="module">
 // Imports for APIs used on this page
 import { fetchPosts, createPost, updatePost, createReply, fetchReplies } from '/assets/js/api/microblog.js';
+import { baseurl } from '{{site.baseurl}}/assets/js/api/config.js';
 
 // Default Key for New MicroBlog Posts
 const pagePermalink = '{{page.permalink}}';
@@ -208,6 +225,7 @@ function closeModal() {
   document.getElementById('microblog-modal').classList.add('hidden');
 }
 document.getElementById('modal-close').onclick = closeModal;
+document.getElementById('microblog-cancel-btn').onclick = closeModal;
 document.getElementById('microblog-modal').onclick = function(e) {
   if (e.target === this) closeModal();
 };
@@ -243,7 +261,7 @@ document.getElementById('reply-form').onsubmit = async function(e) {
   try {
     await createReply({ postId, content, topicPath });
     closeReplyModal();
-    renderMicroblogTable(); // Refresh to show new reply
+    renderMicroblogFeed(); // Refresh to show new reply
   } catch (err) {
     alert('Error posting reply: ' + err.message);
   } finally {
@@ -252,58 +270,50 @@ document.getElementById('reply-form').onsubmit = async function(e) {
   }
 };
 
+function formatTimestamp(timestamp) {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return escapeHtml(timestamp);
+  return `<time datetime="${date.toISOString()}">${escapeHtml(date.toLocaleString())}</time>`;
+}
+
 // Load replies for a specific post
 async function loadRepliesForPost(postId) {
+  const repliesContainer = [...document.querySelectorAll('.microblog-replies')]
+    .find(element => element.dataset.postId === String(postId));
+  if (!repliesContainer) return;
+
   try {
     const repliesData = await fetchReplies(postId);
-    const replies = repliesData.replies || repliesData || [];
-    if (replies.length > 0) {
-      // Find the row for this post
-      const postRow = document.querySelector(`#post-row-${postId}`);
-      if (postRow) {
-        // Check if replies section already exists
-        let repliesRow = document.querySelector(`#replies-row-${postId}`);
-        if (!repliesRow) {
-          // Create a new row for replies
-          repliesRow = document.createElement('tr');
-          repliesRow.id = `replies-row-${postId}`;
-          repliesRow.className = 'replies-row';
-          postRow.insertAdjacentElement('afterend', repliesRow);
-        }
-        
-        // Format replies HTML
-        const repliesHtml = replies.map(reply => {
-          const replyDate = reply.timestamp ? new Date(reply.timestamp).toLocaleString() : '';
-          return `
-            <div class="reply-item ml-4 mt-2 p-2 rounded border-l-4 border-green-500">
-              <div class="text-sm text-gray-600">
-                ${reply.userName || 'Anonymous'} - ${replyDate}
+    const replies = Array.isArray(repliesData?.replies)
+      ? repliesData.replies
+      : Array.isArray(repliesData) ? repliesData : [];
+    repliesContainer.innerHTML = replies.length
+      ? `<h4 class="microblog-replies-title">Replies <span>${replies.length}</span></h4>
+          ${replies.map(reply => `
+            <article class="microblog-reply">
+              <div class="microblog-reply-meta">
+                <strong>${escapeHtml(reply.userName || 'Community member')}</strong>
+                ${formatTimestamp(reply.timestamp)}
               </div>
-              <div class="mt-1">${escapeHtml(reply.content || '')}</div>
-            </div>
-          `;
-        }).join('');
-        
-        repliesRow.innerHTML = `
-          <td colspan="2" class="text-left p-2">
-            <div class="replies-container">
-              <strong class="text-sm text-gray-600">Replies (${replies.length}):</strong>
-              ${repliesHtml}
-            </div>
-          </td>
-        `;
-      }
-    }
+              <p class="microblog-reply-content">${escapeHtml(reply.content || '')}</p>
+            </article>
+          `).join('')}`
+      : '<p class="microblog-no-replies">No replies yet.</p>';
   } catch (error) {
     console.error(`Error loading replies for post ${postId}:`, error);
+    repliesContainer.innerHTML = '<p class="microblog-reply-error">Replies could not be loaded.</p>';
   }
 }
 
-// Utility function to escape HTML
 function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+  return String(text).replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[character]);
 }
 
 // Save Button Listner for Update and Create
@@ -324,7 +334,7 @@ document.getElementById('microblog-form').onsubmit = async function(e) {
       await createPost({ content, topicPath });
     }
     closeModal();
-    renderMicroblogTable();
+    renderMicroblogFeed();
   } catch (err) {
     alert('Error saving post: ' + err.message);
   } finally {
@@ -333,192 +343,115 @@ document.getElementById('microblog-form').onsubmit = async function(e) {
   }
 };
 
-// MicroBlog Table Manager
-async function renderMicroblogTable() {
-    const container = document.getElementById('microblog-playground');
-    try {
-        // Determine filter mode and pass page if needed
-        let pageArg = undefined;
-        if (window.__microblogFilterMode === undefined || window.__microblogFilterMode === 'page') {
-          // Use current page as filter; fallback to location.pathname or a default string
-          pageArg = window.location ? window.location.pathname : 'default';
-        }
-        // API call to Read former Posts
-        const data = await fetchPosts(pageArg);
-        // SVG icons for Create (+) and Edit (pencil)
-        const createIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="microblog-filter-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>`;
-        const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="microblog-filter-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-2.828 1.172H7v-2a4 4 0 011.172-2.828z" /></svg>`;
-        const replyIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="microblog-filter-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>`;
-        // Single page icon (default)
-        const pageIcon = `<span class="microblog-filter-icon microblog-filter-page" id="page-icon" title="Show this page only"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="6" y="4" width="12" height="16" rx="2" fill="white" stroke="white" stroke-width="1.5"/><rect x="8" y="6" width="8" height="12" rx="1" fill="#9333ea" stroke="white" stroke-width="1.5"/></svg></span>`;
-        // Many pages icon (secondary option)
-        const manyPagesIcon = `<span class="microblog-filter-icon microblog-filter-many" id="many-pages-icon" title="Show all pages"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><g><rect x="7" y="15" width="10" height="6" rx="2" fill="#60a5fa" stroke="white" stroke-width="1.2"/><rect x="5" y="11" width="12" height="6" rx="2" fill="#2563eb" stroke="white" stroke-width="1.2"/><rect x="3" y="7" width="12" height="6" rx="2" fill="#1e40af" stroke="white" stroke-width="1.2"/></g></svg></span>`;
-        // Create and Page Icons
-        const controlsInfo = `
-          <span id="filter-icons" class="microblog-filter-controls">
-            <button id="create-btn" class="microblog-btn microblog-btn-create" title="Create Post">${createIcon}</button>
-            ${pageIcon}
-            ${manyPagesIcon}
-          </span>
-        `;
-
-        // Table: Keys and Special Formatting
-        const analytics = [
-          { key: 'userName' },
-          { key: 'timestamp', format: ts => {
-              if (!ts) return '';
-              const d = new Date(ts);
-              if (isNaN(d)) return ts;
-              return d.toLocaleString();
-            }
-          },
-          { key: 'characterCount', format: v => `Count: ${v}` }
-        ];
-        const message = [
-          { key: 'topicPath', format: v => `Topic: ${v}` },
-          { key: 'content' }
-        ];
-
-        // Table: columns
-        let head = `
-            <thead>
-                <tr>
-                    <th style="width:30%">Analytics</th>
-                    <th>Message</th>
-                </tr>
-            </thead>
-        `;
-
-        // Table: rows; generated from microblog data
-        let genBody = '';
-        (data.microblogs || []).forEach(post => {
-            const analyticsCell = analytics.map(f => {
-              let value = post[f.key] ?? '';
-              if (f.format) value = f.format(value);
-              return `<div>${value}</div>`;
-            }).join('');
-            // Edit and Reply buttons inline with Topic
-            const messageCell = message.map(f => {
-              let value = post[f.key] ?? '';
-              if (f.key === 'topicPath') {
-                value = (f.format ? f.format(value) : value) +
-                  ` <button class='edit-btn ml-2' data-id='${post.id}' title='Edit'>${editIcon}</button>` +
-                  ` <button class='reply-btn ml-2' data-id='${post.id}' title='Reply'>${replyIcon}</button>`;
-              } else if (f.format) {
-                value = f.format(value);
-              }
-              return `<div>${value}</div>`;
-            }).join('');
-            genBody += `<tr id="post-row-${post.id}"><td class="text-left">${analyticsCell}</td><td class="text-left">${messageCell}</td></tr>`;
-        });
-
-        // Table: body
-        let body = `
-        <tbody>
-            ${genBody}
-        </tbody>
-        `;
-
-
-        // Table: set container with scrollable wrapper
-        container.innerHTML = `
-        <div class="max-h-[45vh] sm:max-h-[60vh] lg:max-h-[70vh] overflow-y-auto" style="max-height:70vh;">
-          <table id="microblog-table" border="1" style="border-collapse:collapse; margin-top:1em; width:100%;">
-              ${head}
-              ${body}
-          </table>
-        </div>
-        `;
-
-        // Wait for DOM update, then initialize DataTables
-        setTimeout(async () => {
-        // JQuery micro-table Bottom and Top control updates
-        if (window.jQuery && $('#microblog-table').length) {
-            $('#microblog-table').DataTable({
-                initComplete: function() {
-                    // Top controls (Show entries)
-                    const lengthDiv = document.querySelector('.dataTables_length');
-                    if (lengthDiv) {
-                      lengthDiv.style.display = 'flex';
-                      lengthDiv.style.alignItems = 'center';
-                      lengthDiv.insertAdjacentHTML('afterbegin', controlsInfo);
-                      lengthDiv.querySelectorAll('*').forEach(el => {
-                        el.style.marginTop = '0';
-                        el.style.marginBottom = '0';
-                      });
-                      const createBtn = document.getElementById('create-btn');
-                      if (createBtn) createBtn.onclick = () => openModal({ mode: 'create' });
-                    }
-                    // Bottom controls (prefix to info)
-                    const infoDiv = document.querySelector('.dataTables_info');
-                    if (infoDiv) {
-                      infoDiv.style.display = 'flex';
-                      infoDiv.style.alignItems = 'center';
-                      infoDiv.innerHTML = controlsInfo + infoDiv.innerHTML;
-                      // Only bind if not already bound (avoid duplicate IDs)
-                      const btns = infoDiv.querySelectorAll('#create-btn');
-                      btns.forEach(btn => btn.onclick = () => openModal({ mode: 'create' }));
-                    }
-                    // Filter mode logic (default: page, people = all)
-                    window.__microblogFilterMode = 'page';
-                    function setFilterMode(mode) {
-                      window.__microblogFilterMode = mode;
-                      // Update icon backgrounds for visual feedback
-                      const pageIconEl = document.getElementById('page-icon');
-                      const manyPagesIconEl = document.getElementById('many-pages-icon');
-                      if (pageIconEl && manyPagesIconEl) {
-                        if (mode === 'page') {
-                          pageIconEl.style.background = '#9333ea'; // purple
-                          manyPagesIconEl.style.background = '#2563eb'; // blue
-                          pageIconEl.style.opacity = '1';
-                          manyPagesIconEl.style.opacity = '0.5';
-                        } else {
-                          manyPagesIconEl.style.background = '#2563eb';
-                          pageIconEl.style.background = '#9333ea';
-                          manyPagesIconEl.style.opacity = '1';
-                          pageIconEl.style.opacity = '0.5';
-                        }
-                      }
-                      // Re-render table with new filter
-                      renderMicroblogTable();
-                    }
-                    setTimeout(() => {
-                      // Bind ALL filter icons (top and bottom)
-                      document.querySelectorAll('#page-icon').forEach(el => {
-                        el.onclick = () => setFilterMode('page');
-                      });
-                      document.querySelectorAll('#many-pages-icon').forEach(el => {
-                        el.onclick = () => setFilterMode('people');
-                      });
-                      // Only set default filter if not already set
-                      if (!window.__microblogFilterModeInitialized) {
-                        window.__microblogFilterModeInitialized = true;
-                        setFilterMode('page');
-                      }
-                    }, 0);
-                }
-            });
-            // Bind edit buttons using event delegation so it works on all pages
-            $('#microblog-table').off('click', '.edit-btn').on('click', '.edit-btn', function() {
-              const id = $(this).data('id');
-              const post = (data.microblogs || []).find(p => p.id == id);
-              openModal({ mode: 'edit', post });
-            });
-            // Bind reply buttons
-            $('#microblog-table').off('click', '.reply-btn').on('click', '.reply-btn', async function() {
-              const postId = $(this).data('id');
-              openReplyModal(postId);
-            });
-            
-            // Load and display replies for each post
-            for (const post of (data.microblogs || [])) {
-              await loadRepliesForPost(post.id);
-            }
-        }
-        }, 0);
-    } catch (error) {
-        container.innerHTML = `<div style="color:red;">Failed to load microblog posts: ${error.message}</div>`;
-    }
+if (window.__microblogFilterMode === undefined) {
+  window.__microblogFilterMode = 'page';
 }
-renderMicroblogTable();
+
+const pageFilterButton = document.getElementById('microblog-filter-page');
+const allFilterButton = document.getElementById('microblog-filter-all');
+
+function setFilterMode(mode) {
+  window.__microblogFilterMode = mode;
+  pageFilterButton.classList.toggle('is-active', mode === 'page');
+  pageFilterButton.setAttribute('aria-pressed', String(mode === 'page'));
+  allFilterButton.classList.toggle('is-active', mode === 'people');
+  allFilterButton.setAttribute('aria-pressed', String(mode === 'people'));
+  renderMicroblogFeed();
+}
+
+pageFilterButton.onclick = () => setFilterMode('page');
+allFilterButton.onclick = () => setFilterMode('people');
+document.getElementById('create-btn').onclick = () => openModal({ mode: 'create' });
+
+// Microblog feed renderer
+async function renderMicroblogFeed() {
+  const container = document.getElementById('microblog-playground');
+  container.setAttribute('aria-busy', 'true');
+  try {
+    const pageArg = window.__microblogFilterMode === 'page'
+      ? window.location.pathname
+      : undefined;
+    const data = await fetchPosts(pageArg);
+    const posts = Array.isArray(data.microblogs) ? data.microblogs : [];
+
+    pageFilterButton.classList.toggle('is-active', window.__microblogFilterMode === 'page');
+    pageFilterButton.setAttribute('aria-pressed', String(window.__microblogFilterMode === 'page'));
+    allFilterButton.classList.toggle('is-active', window.__microblogFilterMode === 'people');
+    allFilterButton.setAttribute('aria-pressed', String(window.__microblogFilterMode === 'people'));
+
+    if (posts.length === 0) {
+      container.innerHTML = `
+        <div class="microblog-empty-state">
+          <span class="microblog-empty-icon" aria-hidden="true">✦</span>
+          <h3>No posts here yet</h3>
+          <p>Start the conversation with a question, idea, or update.</p>
+          <button class="microblog-btn" type="button" data-action="create">Write the first post</button>
+        </div>
+      `;
+    } else {
+      container.innerHTML = posts.map(post => {
+        const author = String(post.userName || 'Community member');
+        const content = String(post.content || '');
+        const topicPath = String(post.topicPath || pagePermalink || '');
+        const postId = escapeHtml(post.id ?? '');
+        return `
+          <article class="microblog-post" data-post-id="${postId}">
+            <header class="microblog-post-header">
+              <span class="microblog-avatar" aria-hidden="true">${escapeHtml(author.trim().charAt(0).toUpperCase() || 'M')}</span>
+              <div class="microblog-author-details">
+                <strong class="microblog-author">${escapeHtml(author)}</strong>
+                <span class="microblog-post-date">${formatTimestamp(post.timestamp)}</span>
+              </div>
+              <span class="microblog-topic">${escapeHtml(topicPath)}</span>
+            </header>
+            <p class="microblog-post-content">${escapeHtml(content)}</p>
+            <footer class="microblog-post-footer">
+              <span class="microblog-character-count">${content.length} ${content.length === 1 ? 'character' : 'characters'}</span>
+              <div class="microblog-post-actions">
+                <button class="microblog-action-btn" type="button" data-action="edit" data-id="${postId}" aria-label="Edit post by ${escapeHtml(author)}">Edit</button>
+                <button class="microblog-action-btn" type="button" data-action="reply" data-id="${postId}" aria-label="Reply to post by ${escapeHtml(author)}">Reply</button>
+              </div>
+            </footer>
+            <section class="microblog-replies" data-post-id="${postId}" aria-label="Replies">
+              <p class="microblog-no-replies">Loading replies...</p>
+            </section>
+          </article>
+        `;
+      }).join('');
+    }
+
+    container.setAttribute('aria-busy', 'false');
+    container.onclick = event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      if (button.dataset.action === 'create') {
+        openModal({ mode: 'create' });
+        return;
+      }
+      const post = posts.find(item => String(item.id) === button.dataset.id);
+      if (!post) return;
+      if (button.dataset.action === 'edit') openModal({ mode: 'edit', post });
+      if (button.dataset.action === 'reply') openReplyModal(post.id);
+    };
+
+    for (const post of posts) {
+      await loadRepliesForPost(post.id);
+    }
+  } catch (error) {
+    container.setAttribute('aria-busy', 'false');
+    if (error.status === 401) {
+      container.innerHTML = `
+        <div class="microblog-auth-required" role="alert">
+          <h3>Sign in to join the conversation</h3>
+          <p>Microblog posts are available to signed-in users. Sign in, then come back to this page.</p>
+          <a class="microblog-btn" href="${baseurl}/login">Sign in</a>
+        </div>
+      `;
+      return;
+    }
+    container.innerHTML = `<p class="microblog-state-error" role="alert">Failed to load microblog posts: ${escapeHtml(error.message)}</p>`;
+  }
+}
+window.addEventListener('microblog:authenticated', renderMicroblogFeed);
+renderMicroblogFeed();
 </script>
