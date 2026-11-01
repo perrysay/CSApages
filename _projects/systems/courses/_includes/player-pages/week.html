@@ -1,7 +1,12 @@
 {%- comment -%}
   A week's intro page: its learning goals, then its lessons, with a way into
+<<<<<<< HEAD
   the first lesson. Next from the last lesson of the week before lands here.
   Only OCS components; no CSS of its own.
+=======
+  the first lesson. Next from the last lesson of the week
+  before lands here. Only OCS components; no CSS of its own.
+>>>>>>> ad09b514d4ae4371f257639a171ae51966555709
 
   Expects from _layouts/post.html: current_course, current_week, lessonsByWeek.
   The week's goals come from _data/<course>.yml, its lessons from their front matter.
@@ -42,13 +47,20 @@
 
 <div class="ocs__card">
   <h2 class="ocs__section-title">This week</h2>
+<<<<<<< HEAD
   <div class="ocs__links">
     {%- if weekPosts.size > 0 %}
     {%- assign firstPost = weekPosts | first %}
     <a class="ocs__btn accent fill" href="{{ site.baseurl }}{{ firstPost.url }}" data-player-start>Start: {{ firstPost.title | escape }} &rarr;</a>
     {%- endif %}
   </div>
+=======
+>>>>>>> ad09b514d4ae4371f257639a171ae51966555709
   {%- if weekPosts.size > 0 %}
+  {%- assign firstPost = weekPosts | first %}
+  <div class="ocs__links">
+    <a class="ocs__btn accent fill" href="{{ site.baseurl }}{{ firstPost.url }}" data-player-start>Start: {{ firstPost.title | escape }} &rarr;</a>
+  </div>
   <div class="ocs__nav-grid ocs__nav-grid--in-card">
     {%- for post in weekPosts %}
     <a class="ocs__nav-card" href="{{ site.baseurl }}{{ post.url }}">

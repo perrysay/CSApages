@@ -20,7 +20,11 @@ and browser paths. Do not edit those generated copies.
 | `_includes/lesson-{sidebar-nav,topbar,modals}.html` | Desktop/mobile player controls | `_includes/` |
 | `_includes/player-pages/` | Home, sprint, week, and Blogs page bodies | `_includes/player-pages/` |
 | `_includes/sprint-*.html` | Sprint cards, week cards, and progression modal | `_includes/` |
+<<<<<<< HEAD
 | `_includes/{announcement_chat,lesson_chat}.html` | Course announcements and document chat | `_includes/` |
+=======
+| `_includes/{announcement_chat,lesson_chat}.html` | Course and document chat | `_includes/` |
+>>>>>>> ad09b514d4ae4371f257639a171ae51966555709
 | `_includes/{calendar,ocs_calendar_card,announcement_calendar_demo}.html` | Calendar integration and preview interfaces | `_includes/` |
 | `plugins/lesson_player_pages.rb` | Generates course player pages from schedule data | `_plugins/lesson_player_pages.rb` |
 | `data/{cs,csa,csp,csse,csh}.yml` | Shared sprint definitions and course schedules | `_data/` |
@@ -171,8 +175,13 @@ This is a reusable frontend kit, not a standalone backend or complete theme:
   enrolled course in CSSE/CSP/CSA/CSH order.
 - Course homes remain `/navigation/courses/<course>/` and reuse the player with
   announcements/calendar. Legacy chooser/catalog routes remain available.
+<<<<<<< HEAD
 - The generator creates sprint and Blogs pages, and week intro pages only for
   weeks with lessons. It does not generate weekly chat pages.
+=======
+- The generator creates sprint and Blogs pages, and week pages only for weeks
+  with lessons. Sidebar links and generated URLs must stay aligned.
+>>>>>>> ad09b514d4ae4371f257639a171ae51966555709
 - Desktop and mobile panels put course buttons first, X at upper-right, and the
   selected title below. Hamburger controls open navigation; closing returns focus.
 - Blogs, Previous/Next, and reading completion are icon-only with accessible

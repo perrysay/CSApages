@@ -184,6 +184,7 @@ Dir.mktmpdir("course-landing-") do |source|
              "#{path} highlights the current course even without page.course")
       assert(sidebar.include?("href=\"/preview/#{course}/sprint-1/\""),
              "#{path} keeps the existing sprint route")
+<<<<<<< HEAD
       assert(!sidebar.include?("/preview/#{course}/week-1/chat/") &&
              !sidebar.include?("Week 1 Chat"),
              "#{path} omits weekly chat from course navigation")
@@ -191,6 +192,10 @@ Dir.mktmpdir("course-landing-") do |source|
         assert(!html.include?("Week 1 Chat") && !html.include?("/week-1/chat/"),
                "#{path} omits weekly chat from the week intro")
       end
+=======
+      assert(!html.include?("/#{course}/week-1/chat/"),
+             "#{path} has no week chat link; messaging is on the Messages page")
+>>>>>>> ad09b514d4ae4371f257639a171ae51966555709
       assert(sidebar.include?('data-lesson-id="/' + course + '/example/"'),
              "#{path} preserves lesson completion identity")
       week = sidebar[%r{<details data-week-group data-week="1".*?</details>}m].to_s

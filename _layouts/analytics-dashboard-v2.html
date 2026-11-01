@@ -242,12 +242,25 @@ score += gists * 0.5
                                 <span class="ocs__analytics-fineprint">Value: <span id="val-organization">4</span></span>
                             </div>
                         </form>
+                        <label for="forecastGuess" class="ocs__label">
+                            Before you predict, what grade do you expect? (optional, %)
+                        </label>
+                        <input type="number" id="forecastGuess" min="0" max="100" step="1" placeholder="e.g. 88"
+                            class="ocs__input ocs__analytics-card-spaced-sm" style="max-width: 8rem;" />
                         <button id="smartPredictBtn" class="ocs__btn accent fill medium">
                             Smart Predict Grade
                         </button>
                         <p id="userGrade" class="ocs__analytics-result-text ocs__analytics-card-spaced-sm"></p>
+                        <p id="forecastSaved" class="ocs__analytics-fineprint" hidden>
+                            Forecast saved. See how your guesses compare over time in your
+                            <a href="{{ site.baseurl }}/retrospective#forecast">Retrospective</a>.
+                        </p>
                     </div>
                 </div>
+
+                <!-- Grade Calculator, rendered by assets/js/analytics/grade-calculator.js -->
+                <div id="grade-calculator-root" style="margin-top: 2rem;"></div>
+
 
                 <!-- Help content -->
                 <div class="ocs__analytics-card-spaced">
@@ -382,6 +395,28 @@ score += gists * 0.5
                 <script type="module">
     import { pythonURI, javaURI, fetchOptions } from '{{ site.baseurl }}/assets/js/api/config.js';
     import { initOCSAnalyticsDashboard } from '{{ site.baseurl }}/assets/js/ocs-analytics-dashboard.js';
+    import { recordForecast } from '{{ site.baseurl }}/assets/js/analytics/forecast-retrospective.js';
+    import { initGradeCalculator } from '{{ site.baseurl }}/assets/js/analytics/grade-calculator.js';
+
+    // Under the predictor: the student's own Grade Calculator (scores copied from their gradebook, plus
+    // what-ifs). Each Smart Predict is logged for the Forecast Retrospective on the Retrospective page.
+    let gradeCalculatorStarted = false;
+
+    async function showGradeCalculator() {
+        if (gradeCalculatorStarted) return;
+        gradeCalculatorStarted = true;
+        await initGradeCalculator(document.getElementById("grade-calculator-root"));
+    }
+
+    async function logForecast(sliderValues, modelGrade) {
+        const guessInput = document.getElementById("forecastGuess");
+        const guess = guessInput && guessInput.value !== "" ? Number(guessInput.value) : null;
+        const saved = await recordForecast(sliderValues, Math.min(100, Math.max(0, modelGrade)), guess);
+        if (saved) {
+            if (guessInput) guessInput.value = "";
+            document.getElementById("forecastSaved").hidden = false;
+        }
+    }
 
     // ===== Commits Over Time: calendar-week sprint periods =====
     // The weekly calendar announcements define Week 1 as Aug 17–21,
@@ -648,7 +683,6 @@ score += gists * 0.5
         );
     }
 
-    const profileLinksUrl = `${pythonURI}/api/analytics/github/user/profile_links`;
     const userProfileUrl = `${pythonURI}/api/analytics/github/user`;
     const commitsUrl = `${pythonURI}/api/analytics/github/user/commits`;
     const prsUrl = `${pythonURI}/api/analytics/github/user/prs`;
@@ -791,6 +825,9 @@ score += gists * 0.5
             });
             const data = await predict.json();
             userGradeEl.textContent = `Saved & Smart Grade: ${data.predicted_final_grade || 'N/A'}`;
+            if (typeof data.predicted_final_grade === 'number') {
+                await logForecast(body, data.predicted_final_grade);
+            }
         } catch (error) {
             console.error("Error fetching prediction:", error);
             userGradeEl.textContent = "Saved, but error predicting grade.";
@@ -826,20 +863,26 @@ score += gists * 0.5
         });
     }
 
+    // Each card fills in as soon as its own request returns, so the slow commits read doesn't hold up the rest.
     async function fetchData() {
-        const results = await Promise.allSettled(
-            [profileLinksUrl, userProfileUrl, commitsUrl, prsUrl, issuesUrl].map(getJson)
-        );
-        results.filter((r) => r.status === "rejected")
-            .forEach((r) => console.error("Error fetching GitHub data:", r.reason));
-        const [profileLinks, userProfile, commitsData, prsData, issuesData] =
-            results.map((r) => (r.status === "fulfilled" ? r.value : null));
+        const load = (url) => getJson(url).catch((e) => {
+            console.error("Error fetching GitHub data:", e);
+            return null;
+        });
+        await Promise.all([
+            load(userProfileUrl).then(renderProfile),
+            load(issuesUrl).then(renderIssues),
+            load(prsUrl).then(renderPrs),
+            load(commitsUrl).then(renderCommits),
+        ]);
+    }
 
-        if (userProfile && profileLinks) {
+    function renderProfile(userProfile) {
+        if (userProfile) {
             const username = userProfile.login || "N/A";
             const avatarUrl = userProfile.avatar_url || "";
-            const profileUrl = profileLinks.profile_url || "#";
-            const reposUrl = profileLinks.repos_url || "#";
+            const profileUrl = userProfile.html_url || "#";
+            const reposUrl = userProfile.repos_url || "#";
 
             // Fill in profile info
             document.getElementById("avatar").src = avatarUrl;
@@ -853,21 +896,27 @@ score += gists * 0.5
         } else {
             markUnavailable(["username", "profile-url", "repos-url", "public-repos", "public-gists", "followers", "following"]);
         }
+    }
 
+    function renderIssues(issuesData) {
         if (issuesData) {
             document.getElementById("issues-count").textContent = (issuesData.issues || []).length;
             setupInfoModal("issues-info", issuesData);
         } else {
             markUnavailable(["issues-count"]);
         }
+    }
 
+    function renderPrs(prsData) {
         if (prsData) {
             document.getElementById("prs-count").textContent = (prsData.pull_requests || []).length;
             setupInfoModal("prs-info", prsData);
         } else {
             markUnavailable(["prs-count"]);
         }
+    }
 
+    async function renderCommits(commitsData) {
         if (!commitsData) {
             markUnavailable(["commits-count", "lines-changed"]);
             return;
@@ -1167,6 +1216,9 @@ score += gists * 0.5
                     await window.OCSAnalytics.loadAnalyticsSummary();
                 }
             }
+            if (targetId === "tab-content-grade") {
+                await showGradeCalculator();
+            }
             if (targetId === "tab-content-skill-passport") {
                 await loadSkillPassport();
 }
@@ -1178,13 +1230,13 @@ score += gists * 0.5
         const activeTab = document.querySelector(".tab-btn.active");
         if (activeTab) setUnderline(activeTab);
 
-        await fetchData();
-        await loadStudentEvaluation();
-        
-        // Load OCS Analytics if it's the active tab
-        if (window.OCSAnalytics && window.OCSAnalytics.loadAnalyticsSummary) {
-            await window.OCSAnalytics.loadAnalyticsSummary();
+        // The sections don't depend on each other, so they load at the same time.
+        const loads = [fetchData(), loadStudentEvaluation()];
+        // OCS Analytics loads now only if it's the active tab; otherwise when its tab is opened.
+        if (activeTab?.id === "tab-ocs-analytics" && window.OCSAnalytics?.loadAnalyticsSummary) {
+            loads.push(window.OCSAnalytics.loadAnalyticsSummary());
         }
+        await Promise.all(loads);
     };
                 </script>
 

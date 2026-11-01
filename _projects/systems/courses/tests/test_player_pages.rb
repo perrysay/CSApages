@@ -1,5 +1,9 @@
 # Checks _plugins/lesson_player_pages.rb, which builds the lesson player's
+<<<<<<< HEAD
 # sprint, week, and Blogs pages from the course data in _data/.
+=======
+# sprint, week, and blogs pages from the course data in _data/.
+>>>>>>> ad09b514d4ae4371f257639a171ae51966555709
 #
 #   bundle exec ruby scripts/test_player_pages.rb
 require "jekyll"
@@ -50,8 +54,13 @@ expected = %w[
   /csx/sprint-3/ /csx/blogs/
 ]
 assert(by_url.keys.sort == expected.sort,
+<<<<<<< HEAD
        "Each sprint and the course's blogs get a page, and each week with lessons gets its intro; " \
        "data without a course block gets none and no weekly chat pages are generated; got #{by_url.keys.inspect}")
+=======
+       "Each sprint and the course's blogs get a page, and so does each week with lessons, the weeks " \
+       "the sidebar lists; data without a course block gets none; got #{by_url.keys.inspect}")
+>>>>>>> ad09b514d4ae4371f257639a171ae51966555709
 
 titles = by_url.transform_values { |page| page.data["title"] }
 assert(titles["/csx/sprint-1/"] == "Sprint 1: Setting Up Tools", "A shared sprint takes its title from _data/cs.yml; got #{titles["/csx/sprint-1/"].inspect}")
@@ -64,6 +73,10 @@ assert(titles["/csx/blogs/"] == "Blogs", "The blogs page is called Blogs; got #{
 expected_player_pages = {
   "/csx/sprint-1/" => { "course" => "csx", "kind" => "sprint", "sprint" => 1, "week" => nil },
   "/csx/week-0/" => { "course" => "csx", "kind" => "week", "sprint" => 1, "week" => 0 },
+<<<<<<< HEAD
+=======
+  "/csx/week-2/" => { "course" => "csx", "kind" => "week", "sprint" => 2, "week" => 2 },
+>>>>>>> ad09b514d4ae4371f257639a171ae51966555709
   "/csx/blogs/" => { "course" => "csx", "kind" => "blogs", "sprint" => nil, "week" => nil }
 }
 expected_player_pages.each do |url, player_page|
@@ -87,4 +100,8 @@ end
 assert(error&.message&.include?("_data/csy.yml") && error.message.include?("Sprint3"),
        "A sprint without start and end weeks fails the build and names the file and sprint; got #{error.inspect}")
 
+<<<<<<< HEAD
 puts "PASS: sprint, week, and blogs pages for lessons, their titles and front matter, and the missing-weeks error"
+=======
+puts "PASS: sprint and blogs pages, week pages for weeks with lessons, their titles and front matter, and the missing-weeks error"
+>>>>>>> ad09b514d4ae4371f257639a171ae51966555709

@@ -34,8 +34,13 @@ Courses - collection, selector, and navigation system
     │       └── Week collection
     │           └── Week
     │               ├── Introduction and learning goals
+<<<<<<< HEAD
     │               ├── Document collection
     │               │   └── Lesson / assignment / reference document
+=======
+    │               └── Document collection
+    │                   └── Lesson / assignment / reference document
+>>>>>>> ad09b514d4ae4371f257639a171ae51966555709
     └── Blogs view
         ├── Post catalog
         └── Post reader
